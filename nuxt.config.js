@@ -3,6 +3,7 @@ export default {
    ** Nuxt target
    ** See https://nuxtjs.org/api/configuration-target
    */
+  ssr: true,
   target: 'server',
   /*
    ** Headers of the page
@@ -24,7 +25,7 @@ export default {
    ** Plugins to load before mounting the App
    ** https://nuxtjs.org/guide/plugins
    */
-  plugins: [{src: '~/plugins/persistedState.js' }],
+  plugins: [{src: '~/plugins/persistedState.js', ssr: true }],
   /*
    ** Auto import components
    ** See https://nuxtjs.org/api/configuration-components
@@ -47,6 +48,7 @@ export default {
     // Doc: https://axios.nuxtjs.org/usage
     '@nuxtjs/axios',
     '@nuxtjs/dayjs',
+    ['vue-wait/nuxt', { useVuex: true }]
   ],
   /*
    ** Axios module configuration

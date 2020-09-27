@@ -1,13 +1,13 @@
 <template>
-  <div class="container">
+  <div class="container px-24 py-6 mx-auto">
     <div v-if="error.statusCode === 404">
-      <h1>Page not found</h1>
+      <h1 class="text-4xl">Page not found</h1>
       <p>{{ error.message }}</p>
     </div>
     <div v-else>
-      <h1>An error occurred</h1>
+      <h1 class="text-4xl">An error occurred</h1>
     </div>
-    <n-link to="/">Home page</n-link>
+    <nuxt-link to="/" class="text-blue-600 hover:text-blue-800 hover:underline">Go back to home page</nuxt-link>
   </div>
 </template>
 

@@ -1,25 +1,27 @@
 import axios from 'axios'
 import jwt_decode from 'jwt-decode'
 
-import VuexPersistence from 'vuex-persistedstate'
+// import VuexPersistence from 'vuex-persistedstate'
 /**
  * This function below clean the mess when you're using window API, it can't do it on server side
  * so this is the workaround I found on Github issues.
  * https://github.com/championswimmer/vuex-persist/issues/88#issuecomment-606881735 
  */
-function getPlugins() {
-  let plugins = []
+/*
+    function getPlugins() {
+    let plugins = []
 
-  if (process.browser) {
-      const vuexLocal = new VuexPersistence({
-          storage: window.localStorage
-      })
+    if (process.browser) {
+        const vuexLocal = new VuexPersistence({
+            storage: window.localStorage
+        })
+        plugins.push(vuexLocal.plugin)
+        return plugins
+    }
+    }
 
-      plugins.push(vuexLocal.plugin)
-  }
-}
-
-export const plugins = getPlugins()
+    export const plugins = VuexPersistence()
+*/
 
 /**
  * State in Vuex is like Vue's data that can store.. well, data. 
@@ -38,6 +40,7 @@ export const state = () => ({
     userData: [],
     userEmail: null,
     loginStatus: null,
+    version: null
 })
 
 /**
@@ -67,6 +70,9 @@ export const mutations = {
     },
     setAuthorized(state, payload) {
         state.authorized = payload
+    },
+    setVersion(state, version) {
+        state.version = version;
     }
 }
 
@@ -83,14 +89,22 @@ export const mutations = {
  * For learn more about Vuex Actions: https://vuex.vuejs.org/guide/actions.html
  */
 export const actions = {
+    async nuxtServerInit({ commit }, { req }) {
+        if (req.cookies.vuex) {
+          const STATE = JSON.parse(req.cookies.vuex);
+    
+          commit('setVersion', STATE.version);
+        }
+    },
     async login({commit, dispatch}, {email, password, csrf}) {
         try {
             const res = await axios.post('http://localhost:3000/api/login', 
             { email, password, key: '2spX^cJdJ8wArpEei!AQ4nH%Y&%5s*bdmNoZuMPkyrqLjO*lO8t3ZY^EvSX^Nx!r#9t!BtXw0S%j5ranpR*7mL1&' },
             { headers: { 'csrf-token': csrf } } )
+            console.log(res)
             if (res.data.message == 'failed') {
                 commit('setLoginStatus', 'Wrong password')
-                return Promise.resolve("Failed: wrong password")
+                return Promise.reject(`Failed: wrong password. ${res.data['detail']}`)
             } else if (res.data.message = 'success') {
                 commit('setLoginStatus', 'Login success')
                 commit('setAuth', true)
@@ -100,10 +114,31 @@ export const actions = {
                         .catch(err => console.log(err))
             } else {
                 commit('setLoginStatus', 'Login failed')
-                return Promise.resolve("Failed: login just failed")
+                return Promise.reject(`Failed: login just failed. ${res.data['detail']}`)
             }
         } catch (error) {
             return Promise.reject(error + ` \nvalues:  ${email} ${password} ${csrf}`)
+        }
+    },
+    async logout({commit, state}, {csrf}) {
+        try {
+            const res = await axios.post('http://localhost:3000/api/logout',
+            {email: state.userEmail, key: '2spX^cJdJ8wArpEei!AQ4nH%Y&%5s*bdmNoZuMPkyrqLjO*lO8t3ZY^EvSX^Nx!r#9t!BtXw0S%j5ranpR*7mL1&'},
+            {headers: { 'csrf-token': csrf } } )
+            console.log(res)
+            if (res.data.message == "failed") {
+                return Promise.reject(`Logout failed. ${res.data['detail']}`)
+            } else if (res.data.message == "success") {
+                commit('setLoginStatus', null)
+                commit('setAuth', false)
+                commit('setUserEmail', null)
+                commit('setUserData', null)
+                return Promise.resolve("Logout success")
+            } else {
+                return Promise.reject(`Logout failed. ${res.data['detail']}`)
+            }
+        } catch (error) {
+            return Promise.reject(error)
         }
     },
     async getUserData({commit}, {email}) {
@@ -113,6 +148,23 @@ export const actions = {
             )
             const decoded = jwt_decode(res.data.data)
             return Promise.resolve(decoded)
+        } catch (error) {
+            return Promise.reject(error)
+        }
+    },
+    async register({ commit }, { name, email, password, csrf }) {
+        try {
+            const res = await axios.post('http://localhost:3000/api/register', 
+            { name, email, password, key: "2spX^cJdJ8wArpEei!AQ4nH%Y&%5s*bdmNoZuMPkyrqLjO*lO8t3ZY^EvSX^Nx!r#9t!BtXw0S%j5ranpR*7mL1&"},
+            { headers: { 'csrf-token': csrf } })
+            console.log(res)
+            if (res.data.message == "failed") {
+                return Promise.reject(`Failed: Server error. ${res.data['detail']}`)
+            } else if (res.data.message == "success") {
+                return Promise.resolve("Success: Please login")
+            } else {
+                return Promise.reject(`Failed: Server error. ${res.data['detail']}`)
+            }
         } catch (error) {
             return Promise.reject(error)
         }
